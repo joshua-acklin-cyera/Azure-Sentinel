@@ -122,6 +122,50 @@
       "Type": "String"
     },
     {
+      "Name": "Start",
+      "Type": "DateTime"
+    },
+    {
+      "Name": "EcsClusterArn",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsClusterName",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsContainerInstanceArn",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsContainerInstanceId",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsContainerId",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsSecondContainerId",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsServiceName",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsTaskDefinitionArn",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsTaskArn",
+      "Type": "String"
+    },
+    {
+      "Name": "EcsTaskId",
+      "Type": "String"
+    },
+    {
       "Name": "SourceSystem",
       "Type": "String"
     },

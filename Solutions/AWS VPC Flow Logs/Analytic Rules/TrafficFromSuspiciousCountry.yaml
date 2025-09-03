@@ -1,0 +1,52 @@
+id: be56eb7c-2e1e-4c27-ac43-0af06ae10f30
+name: AWS VPC Flow - Detect Traffic from Suspicious Country IP
+description: |
+  This analytics rule identifies network sessions where either the source or destination IP address originates from countries known for cyber threat activity or geopolitical risk. The rule leverages geolocation data to flag traffic involving IPs from a predefined list of suspicious countries. These flows may indicate potential reconnaissance, data exfiltration, or unauthorized access attempts.
+severity: High
+status: Available 
+requiredDataConnectors:
+  - connectorId: AWSVPCFlow
+    dataTypes: 
+      - AWSVPCFlow
+queryFrequency: 15m
+queryPeriod: 15m
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - Reconnaissance
+  - Exfiltration
+relevantTechniques:
+  - T1590
+  - T1041
+query: |
+  // Adjust this list according to threat requirements
+  let SuspiciousCountries = dynamic(['Russia', 'North Korea', 'Iran', 'China']);
+  AWSVPCFlow
+  | where Action != "REJECT"
+  | where ipv4_is_private(SrcAddr) == False and SrcAddr !in ("127.0.0.1", "::1")
+  | extend SrcIpCountry = iff(ipv4_is_private(SrcAddr) == False and SrcAddr !in ("127.0.0.1", "::1"), geo_info_from_ip_address(SrcAddr).country, '')
+  | extend DstIpCountry = iff(ipv4_is_private(DstAddr) == False and DstAddr !in ("127.0.0.1", "::1"), geo_info_from_ip_address(DstAddr).country, '')
+  | where SrcIpCountry in (SuspiciousCountries) or DstIpCountry in (SuspiciousCountries)
+  | project TimeGenerated, AccountId, InterfaceId, SrcAddr, SrcIpCountry, SrcPort, DstAddr, DstIpCountry, DstPort, Protocol, Action  
+entityMappings:
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: SrcAddr
+      - identifier: Address
+        columnName: DstAddr
+  - entityType: Account
+    fieldMappings:
+    - identifier: CloudAppAccountId
+    - columnName: AccountId
+customDetails:
+  SrcIpCountry: SrcIpCountry
+  DstIpCountry: DstIpCountry
+  InterfaceId: InterfaceId
+  SrcPort: SrcPort
+  DstPort: DstPort
+alertDetailsOverride:
+  alertDisplayNameFormat: "Network Traffic from/to Suspicious Country {{SrcIpCountry}} to/from {{DstIpCountry}}"
+  alertDescriptionFormat: "Network Traffic from ({{SrcAddr}}) to ({{DstAddr}}) detected."
+version: 1.0.0
+kind: Scheduled

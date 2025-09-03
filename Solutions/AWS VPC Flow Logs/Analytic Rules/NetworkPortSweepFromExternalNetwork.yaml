@@ -1,0 +1,37 @@
+id: aws-vpcflow-network-port-sweep
+name: AWS VPC Flow - Network Port Sweep from External Network
+description: |
+  This detection rule identifies scenarios where a particular port is being scanned by multiple external sources using AWS VPC Flow logs. It helps detect reconnaissance or discovery activities targeting your cloud network.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: AWSVPCFlow
+    dataTypes:
+      - AWSVPCFlow
+queryFrequency: 15m
+queryPeriod: 15m
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - Reconnaissance
+  - Discovery
+relevantTechniques:
+  - T1590
+  - T1046
+query: |
+  // Adjust threshold based on your environment and risk tolerance
+  let threshold = 25;
+  AWSVPCFlow
+  | where ipv4_is_private(DstAddr)  // inbound traffic 
+  | summarize make_set(DstAddr, 100) by SrcAddr, DstPort
+  | where array_length(set_DstAddr) > threshold
+  | project SrcAddr, DstPort, set_DstAddr
+customDetails:
+  AllDstAddr: set_DstAddr
+eventGroupingSettings:
+  aggregationKind: SingleAlert
+alertDetailsOverride:
+  alertDisplayNameFormat: Network Port Sweep detected targeting port {{DstPort}}
+  alertDescriptionFormat: Network Port Sweep detected targeting port {{DstPort}} by multiple external sources.
+version: 1.0.0
+kind: Scheduled

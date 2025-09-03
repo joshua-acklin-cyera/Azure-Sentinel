@@ -1,0 +1,44 @@
+id: a69e2000-0551-41fe-92f4-6ddeac1f6885
+name: AWS VPC Flow - Possible Remote Desktop Network (RDP) Brute force
+description: |
+  This analytics rule detects potential brute-force attacks on Remote Desktop Protocol (RDP) services by analyzing failed network session attempts. The rule focuses on identifying multiple failed connection attempts to RDP ports (typically port 3389) from the same source IP address within a short time frame. Such patterns may indicate an attacker attempting to gain unauthorized access to systems via brute-force methods.
+severity: Medium
+status: Available 
+requiredDataConnectors:
+  - connectorId: AWSVPCFlow
+    dataTypes: 
+      - AWSVPCFlow
+queryFrequency: 15m
+queryPeriod: 15m
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - CredentialAccess
+relevantTechniques:
+  - T1110
+query: |
+  // Adjust the FailureThreshold based on your environment and risk tolerance
+  let FailureThreshold = 25;
+  AWSVPCFlow
+  // Start of the query and Filter events that resulted in failure
+  | where Action == 'REJECT'
+  // Filter out private source IP addresses and focus on specific destination port (3389)
+  // Also, ensure that the source and destination IP addresses are not the same
+  | where not(ipv4_is_private(SrcAddr)) and tostring(DstPort) == 3389 and SrcAddr != DstAddr
+  // Summarize the data by source and destination IP addresses, destination port number, network protocol, and event result
+  // Also, bin the time generated in 5-minute intervals
+  // Calculate the minimum and maximum time generated and the sum of event counts
+  | summarize StartTime= min(TimeGenerated), EndTime= max(TimeGenerated), TargetIPs=dcount(DstAddr), Eventscount=count() by SrcAddr, DstPort, bin(TimeGenerated, 5m)
+  // Filter the summarized data to include only those with an event count of 25 or more
+  | where Eventscount >= FailureThreshold
+entityMappings:
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: SrcAddr
+eventGroupingSettings:
+  aggregationKind: AlertPerResult
+alertDisplayNameFormat: "Possible RDP Brute Force Attack from {{SrcAddr}}"
+alertDescriptionFormat: "Multiple failed RDP connection attempts detected from source IP {{SrcAddr}} between {{StartTime}} and {{EndTime}}."
+version: 1.0.0
+kind: Scheduled
